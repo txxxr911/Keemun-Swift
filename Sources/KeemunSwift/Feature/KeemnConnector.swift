@@ -2,43 +2,69 @@ import Foundation
 import Combine
 
 /// Represents a holder of `Store`.
-public class KeemunConnector<ViewState, ExternalMsg>: ObservableObject {
+@MainActor
+public final class KeemunConnector<ViewState: Sendable, ExternalMsg: Sendable>: ObservableObject {
     /// Current state for user view.
     @Published public private(set) var state: ViewState
-    
-    private let dispath: (ExternalMsg) -> Void
+
+    private var dispatch: @Sendable (ExternalMsg) -> Void
     private var cancellable: Set<AnyCancellable> = []
-    
-    public init<State, Msg, Effect>(
+
+    public init<State: Sendable, Msg: Sendable, Effect: Sendable>(
+            store: Store<State, Msg, Effect>,
+            featureParams: FeatureParams<State, Msg, ViewState, ExternalMsg>
+    ) async {
+        // 1) получаем initial state (await допускается, т.к. init async)
+        let initial = await store.getCurrentStateValue()
+        // 2) инициализируем ВСЕ stored props до любых Task/closure
+        self.state = featureParams.viewStateTransform.transform(initial)
+        self.dispatch = { msg in
+            Task {
+                await store.dispatchMessage(featureParams.messageTransform(msg))
+            }
+        }
+
+        // 3) запускаем наблюдение уже после инициализации
+        Task { [weak self] in
+            guard let self else { return }
+            let stream = await store.stateStream()
+            for await newState in stream {
+                // мы уже @MainActor, можно писать напрямую
+                self.state = featureParams.viewStateTransform.transform(newState)
+            }
+        }
+    }
+
+    func observeStateChanges<State: Sendable, Msg: Sendable, Effect: Sendable>(
         store: Store<State, Msg, Effect>,
         featureParams: FeatureParams<State, Msg, ViewState, ExternalMsg>
-    ) {
-        self.dispath = { msg in store.dispatch(featureParams.messageTransform(msg)) }
-        self.state = featureParams.viewStateTransform.transform(store.currentState)
-        
-        let viewStateQueue = DispatchQueue(label: "keemun.viewStateQueue", qos: .userInitiated)
-        store.state
-            .receive(on: viewStateQueue)
-            .map(featureParams.viewStateTransform.transform)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] in
-                guard let self else { return }
-                self.state = $0
+    ) async {        
+        let stateStrem = await store.stateStream()
+        Task {
+            for await newState in stateStrem {
+                await transformStateForViewState(featureParams: featureParams, state: newState)
             }
-            .store(in: &cancellable)
+        }
     }
-    
+
+    func transformStateForViewState<State, Msg>(
+        featureParams: FeatureParams<State, Msg, ViewState, ExternalMsg>,
+        state: State
+    ) async {
+        self.state = featureParams.viewStateTransform.transform(state)
+    }
+
     /// Sending messages asynchronously.
     public func dispatch(_ msg: ExternalMsg) {
-        dispath(msg)
+        dispatch(msg)
     }
 }
 
 public extension KeemunConnector {
-    convenience init<State, Msg, Effect>(
+    convenience init<State: Sendable, Msg: Sendable, Effect: Sendable>(
         storeParams: StoreParams<State, Msg, Effect>,
         featureParams: FeatureParams<State, Msg, ViewState, ExternalMsg>
-    ) {
-        self.init(store: Store(storeParams), featureParams: featureParams)
+    ) async {
+        await self.init(store: Store(storeParams), featureParams: featureParams)
     }
 }

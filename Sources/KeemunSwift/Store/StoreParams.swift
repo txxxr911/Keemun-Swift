@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-public struct StoreParams<State, Msg, Effect> {
+public struct StoreParams<State, Msg, Effect>: Sendable {
     public let start: Start<State, Effect>
     public let update: Update<State, Msg, Effect>
     public let effectHandlers: [EffectHandler<Effect, Msg>]

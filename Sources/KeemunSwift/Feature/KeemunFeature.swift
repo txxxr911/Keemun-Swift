@@ -12,7 +12,9 @@ public protocol KeemunFeature<State, Msg, Effect, ViewState, ExternalMsg> {
 }
 
 public extension KeemunConnector {
-    convenience init<State, Msg, Effect>(_ feature: some KeemunFeature<State, Msg, Effect, ViewState, ExternalMsg>) {
-        self.init(storeParams: feature.storeParams, featureParams: feature.featureParams)
+    convenience init<State: Sendable, Msg: Sendable, Effect: Sendable>(
+        _ feature: some KeemunFeature<State, Msg, Effect, ViewState, ExternalMsg>
+    ) async {
+        await self.init(storeParams: feature.storeParams, featureParams: feature.featureParams)
     }
 }

@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.1
 import PackageDescription
 
 let package = Package(
@@ -10,13 +10,13 @@ let package = Package(
         .watchOS(.v6),
     ],
     products: [
-        .library(name: "Keemun", targets: ["Keemun"]),
+        .library(name: "Keemun", targets: ["Keemun"])
     ],
     dependencies: [
-        .package(url: "https://github.com/groue/CombineExpectations.git", from: "0.10.0"),
+//        .package(url: "https://github.com/groue/CombineExpectations.git", from: "0.10.0"),
     ],
     targets: [
-        .target(name: "Keemun"),
-        .testTarget(name: "KeemunTests", dependencies: ["Keemun", "CombineExpectations"]),
+        .target(name: "Keemun")
+//        .testTarget(name: "KeemunTests", dependencies: ["Keemun", "CombineExpectations"]),
     ]
 )

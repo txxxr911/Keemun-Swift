@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol KeemunFeature<State, Msg, Effect, ViewState, ExternalMsg> {
+public protocol KeemunFeature<State, Msg, Effect, ViewState, ExternalMsg>: Sendable {
     associatedtype State: Sendable
     associatedtype Msg: Sendable
     associatedtype Effect: Sendable

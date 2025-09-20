@@ -1,12 +1,12 @@
 import Foundation
 
 public protocol KeemunFeature<State, Msg, Effect, ViewState, ExternalMsg> {
-    associatedtype State
-    associatedtype Msg
-    associatedtype Effect
-    associatedtype ViewState = State
-    associatedtype ExternalMsg = Msg
-    
+    associatedtype State: Sendable
+    associatedtype Msg: Sendable
+    associatedtype Effect: Sendable
+    associatedtype ViewState: Sendable = State
+    associatedtype ExternalMsg: Sendable = Msg
+
     var storeParams: StoreParams<State, Msg, Effect> { get }
     var featureParams: FeatureParams<State, Msg, ViewState, ExternalMsg> { get }
 }
